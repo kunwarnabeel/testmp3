@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Snake Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        /* Custom styles */
+        html, body {
+            height: 100%; margin: 0; padding: 0; overflow: hidden;
+            background-color: #1a202c; color: #e2e8f0; font-family: 'Inter', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .game-container {
+             width: 100%; height: 100%; display: flex;
+             justify-content: center; align-items: center;
+        }
+        canvas {
+            display: block; background-color: #111827;
+        }
+        .screen#start-screen {
+            padding: 1.5rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; /* Increased gap slightly */
+            min-width: 400px; max-width: 90vw; max-height: 95vh; background-color: #2d3748; border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+        }
+        .screen#game-screen {
+            width: 100%; height: 100%; padding: 0; position: relative;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .input-group {
+             width: 100%; max-width: 320px; margin-bottom: 0.5rem;
+        }
+        .input-group label {
+             display: block; text-align: left; font-size: 0.875rem; font-weight: 500; color: #a0aec0; margin-bottom: 0.25rem;
+        }
+        .input-group input[type="text"] { width: 100%; }
+        /* Styling for selection options (Avatar & Prize) */
+        .selection-option {
+            cursor: pointer; border: 2px solid transparent; border-radius: 50%;
+            padding: 2px; transition: border-color 0.2s; width: 50px; height: 50px;
+            display: inline-flex; justify-content: center; align-items: center; background-color: #4a5568;
+            vertical-align: middle;
+        }
+        .selection-option.prize-option { /* Slightly different style for prize options if needed */
+             border-radius: 8px; /* Square prizes */
+             width: 45px; height: 45px;
+        }
+        .selection-option.selected { border-color: #4299e1; }
+        .selection-option img, .selection-option i {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+        }
+        .selection-option.prize-option img { border-radius: 6px; } /* Match parent radius */
+        .selection-option i { font-size: 24px; color: #e2e8f0; }
+        /* Style for default prize option text */
+        .default-prize-text {
+            font-size: 10px; font-weight: bold; color: #2d3748; line-height: 1.1; text-align: center;
+        }
+
+        .scoreboard {
+            position: absolute; top: 10px; left: 10px; background-color: rgba(45, 55, 72, 0.8);
+            padding: 10px; border-radius: 5px; color: #e2e8f0; font-size: 0.9rem; min-width: 150px; z-index: 10;
+        }
+        .player-score { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .player-score .name { font-weight: bold; margin-right: 10px; display: flex; align-items: center; }
+        .player-score .avatar-icon {
+            width: 20px; height: 20px; border-radius: 50%; margin-right: 5px; object-fit: cover;
+            border: 1px solid #718096; display: inline-flex; justify-content: center; align-items: center;
+        }
+        .player-score .avatar-icon i { font-size: 12px; width: 100%; height: 100%; line-height: 18px; text-align: center; }
+        .message-box {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: rgba(45, 55, 72, 0.9); padding: 20px 30px; border-radius: 8px;
+            text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 100; display: none;
+        }
+        .message-box h2 { margin-bottom: 15px; font-size: 1.5rem; color: #a0aec0; }
+        .message-box button { margin-top: 10px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+
+        <div id="start-screen" class="screen">
+            <h1 class="text-3xl font-bold mb-2 text-blue-400">Top Of The Line Snakes</h1>
+            <p class="mb-3 text-sm text-gray-400">Configure your game & start!</p>
+
+            <div class="input-group">
+                <label for="player-name">Player Name:</label>
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="12" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white">
+            </div>
+
+            <div class="input-group">
+                <label>Choose Avatar:</label>
+                <div id="avatar-options" class="flex justify-start items-center gap-3 flex-wrap mb-2">
+                     <div class="selection-option selected" data-avatar-type="image" data-avatar-value="HARDCODED_AVATAR_IMG_1">
+                         <img src="https://github.com/kunwarnabeel/testmp3/blob/main/123.png?raw=true" alt="Avatar 1">
+                    </div>
+                    <div class="selection-option" data-avatar-type="image" data-avatar-value="HARDCODED_AVATAR_IMG_2">
+                         <img src="https://github.com/kunwarnabeel/testmp3/blob/main/b4d0634f-b14c-4ca0-ad14-5b65f50a57c4.webp?raw=true" alt="Avatar 2">
+                    </div>
+                     </div>
+                 <p class="text-xs text-gray-500 mt-1">Select an avatar.</p>
+            </div>
+
+            <div class="input-group mt-3 border-t border-gray-600 pt-3">
+                 <label>Choose Prize Image:</label>
+                 <div id="prize-options" class="flex items-center gap-3">
+                     <div class="selection-option prize-option selected" data-prize-type="image" data-prize-value="HARDCODED_PRIZE_IMG">
+                         <img src="https://github.com/kunwarnabeel/testmp3/blob/main/chicken.webp?raw=true" alt="Prize Preview">
+                     </div>
+                      </div>
+                  <p class="text-xs text-gray-500 mt-1">Select the prize appearance.</p>
+            </div>
+
+
+            <button id="join-game-button" class="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">Start Game</button>
+            <p class="text-xs text-gray-500 mt-2">Note: Single-player demo.</p>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+             <div id="scoreboard" class="scoreboard"></div>
+             <canvas id="game-canvas"></canvas>
+             <div id="game-message-box" class="message-box"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameMessageBox = document.getElementById('game-message-box');
+        const playerNameInput = document.getElementById('player-name');
+        const avatarOptionsContainer = document.getElementById('avatar-options');
+        const prizeOptionsContainer = document.getElementById('prize-options');
+        const joinGameButton = document.getElementById('join-game-button');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreboardDiv = document.getElementById('scoreboard');
+
+        // --- Game Configuration ---
+        const GRID_SIZE = 20;
+        const HEAD_SIZE_MULTIPLIER = 4; // Adjusted for reasonable head size
+        const SNAKE_COLOR_HEAD = '#4299e1';
+        const SNAKE_COLOR_BODY = '#63b3ed';
+        const FOOD_COLOR = '#f56565';
+        const PRIZE_COLOR = '#f6e05e';
+        const GAME_SPEED = 100;
+        const PRIZE_MOVE_INTERVAL = 3;
+        const PRIZE_SPAWN_INTERVAL = 15000;
+
+        // --- Hardcoded Image URLs ---
+        // Using specific URLs provided by user + placeholders if needed
+        const HARDCODED_AVATAR_IMAGE_URL_1 = 'https://github.com/kunwarnabeel/testmp3/blob/main/123.png?raw=true';
+        const HARDCODED_AVATAR_IMAGE_URL_2 = 'https://github.com/kunwarnabeel/testmp3/blob/main/b4d0634f-b14c-4ca0-ad14-5b65f50a57c4.webp?raw=true';
+        const HARDCODED_PRIZE_IMAGE_URL = 'https://github.com/kunwarnabeel/testmp3/blob/main/chicken.webp?raw=true';
+
+        // --- Preload Hardcoded Images ---
+        // Create Map for easier lookup
+        const preloadedAvatarImages = new Map();
+        [HARDCODED_AVATAR_IMAGE_URL_1, HARDCODED_AVATAR_IMAGE_URL_2].forEach(url => {
+            const img = new Image();
+            img.src = url;
+            img.onload = () => console.log(`Avatar image preloaded: ${url}`);
+            img.onerror = () => console.error(`Failed to preload avatar image: ${url}`);
+            preloadedAvatarImages.set(url, img);
+        });
+
+        const hardcodedPrizeImageObject = new Image();
+        hardcodedPrizeImageObject.src = HARDCODED_PRIZE_IMAGE_URL;
+        hardcodedPrizeImageObject.onload = () => console.log("Hardcoded prize image preloaded.");
+        hardcodedPrizeImageObject.onerror = () => console.error("Failed to preload hardcoded prize image.");
+
+        // --- Dynamic Game State ---
+        let CANVAS_WIDTH = window.innerWidth;
+        let CANVAS_HEIGHT = window.innerHeight;
+        let TILE_COUNT_X = Math.floor(CANVAS_WIDTH / GRID_SIZE);
+        let TILE_COUNT_Y = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
+
+        // --- Player & Customization State ---
+        // Default to the first hardcoded avatar image
+        let localPlayer = { name: 'Player', avatarType: 'image', avatarValue: HARDCODED_AVATAR_IMAGE_URL_1, score: 0 };
+        // Default to the hardcoded prize image
+        let selectedPrizeType = 'image';
+        let selectedPrizeValue = HARDCODED_PRIZE_IMAGE_URL;
+
+        // --- Sound Effects ---
+        // Using URLs provided by user
+        const foodSound = new Audio('https://github.com/kunwarnabeel/testmp3/blob/main/Voicy_Fart.mp3?raw=true');
+        const prizeSound = new Audio('https://github.com/kunwarnabeel/testmp3/blob/main/Voicy_OMG.mp3?raw=true');
+        foodSound.volume = 1.0; prizeSound.volume = 1.0;
+        foodSound.preload = 'auto'; prizeSound.preload = 'auto';
+
+        // --- Game State ---
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let prize = { x: 0, y: 0, active: false, imageUrl: null, label: null };
+        let dx = 0, dy = 0;
+        let changingDirection = false;
+        let gameLoopInterval = null;
+        let prizeSpawnTimeout = null;
+        let prizeMoveCounter = 0;
+        let isGameOver = false;
+
+        // --- Utility Functions ---
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        // --- Canvas & Screen Setup ---
+        function updateCanvasSize() {
+            CANVAS_WIDTH = window.innerWidth; CANVAS_HEIGHT = window.innerHeight;
+            canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+            TILE_COUNT_X = Math.floor(CANVAS_WIDTH / GRID_SIZE); TILE_COUNT_Y = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
+            // console.log(`Canvas resized: ${CANVAS_WIDTH}x${CANVAS_HEIGHT}, Tiles: ${TILE_COUNT_X}x${TILE_COUNT_Y}`); // Less verbose logging
+        }
+        function handleResize() {
+             if (!isGameOver && gameScreen.style.display !== 'none') {
+                updateCanvasSize();
+                 if (gameLoopInterval) { clearCanvas(); drawFood(); drawPrize(); drawSnake(); }
+            } else { updateCanvasSize(); }
+        }
+
+        // --- Avatar Selection ---
+        function selectAvatar(element) {
+            avatarOptionsContainer.querySelectorAll('.selection-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            localPlayer.avatarType = element.dataset.avatarType; // Should always be 'image' now
+
+            // Get the actual image URL from the img src within the selected option
+            const imgElement = element.querySelector('img');
+            if (imgElement) {
+                 localPlayer.avatarValue = imgElement.src; // Use the src URL directly
+            } else {
+                 // Fallback if something goes wrong (shouldn't happen with current HTML)
+                 localPlayer.avatarValue = HARDCODED_AVATAR_IMAGE_URL_1;
+            }
+            console.log("Avatar selected:", localPlayer.avatarValue);
+        }
+        avatarOptionsContainer.addEventListener('click', (e) => {
+            const targetOption = e.target.closest('.selection-option');
+            if (targetOption) selectAvatar(targetOption);
+        });
+
+        // --- Prize Selection ---
+        function selectPrize(element) {
+            prizeOptionsContainer.querySelectorAll('.selection-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedPrizeType = element.dataset.prizeType; // Should always be 'image' now
+
+            const imgElement = element.querySelector('img');
+            if (imgElement) {
+                selectedPrizeValue = imgElement.src; // Use the src URL directly
+            } else {
+                 // Fallback (shouldn't happen)
+                 selectedPrizeValue = HARDCODED_PRIZE_IMAGE_URL;
+            }
+            console.log("Prize selected:", selectedPrizeValue);
+        }
+        prizeOptionsContainer.addEventListener('click', (e) => {
+             const targetOption = e.target.closest('.selection-option');
+             if (targetOption) selectPrize(targetOption);
+        });
+
+
+        // --- Screen Transitions ---
+        function showScreen(screenElement) {
+            startScreen.classList.add('hidden'); gameScreen.classList.add('hidden'); gameMessageBox.style.display = 'none';
+            if (screenElement === gameScreen) {
+                 document.body.style.justifyContent = 'flex-start'; document.body.style.alignItems = 'flex-start';
+                 gameScreen.classList.remove('hidden'); gameScreen.style.display = 'flex';
+            } else if (screenElement === startScreen) {
+                 document.body.style.justifyContent = 'center'; document.body.style.alignItems = 'center';
+                 startScreen.classList.remove('hidden'); startScreen.style.display = 'flex';
+            }
+        }
+        function showGameMessage(title, buttonText, onButtonClick) {
+            gameMessageBox.innerHTML = `<h2 class="text-xl font-bold text-blue-300">${title}</h2><button id="message-button" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg">${buttonText}</button>`;
+            gameMessageBox.style.display = 'block'; document.getElementById('message-button').onclick = onButtonClick;
+        }
+
+        // --- Game Logic ---
+        function initializeGame() {
+            isGameOver = false; localPlayer.score = 0; updateCanvasSize();
+            const startX = Math.floor(TILE_COUNT_X / 2); const startY = Math.floor(TILE_COUNT_Y / 2);
+            snake = [ { x: startX, y: startY }, { x: startX - 1, y: startY }, { x: startX - 2, y: startY } ];
+            dx = 1; dy = 0; changingDirection = false; prize.active = false; prizeMoveCounter = 0;
+            spawnFood(); updateScoreboard(); showScreen(gameScreen);
+            if (gameLoopInterval) clearInterval(gameLoopInterval); if (prizeSpawnTimeout) clearTimeout(prizeSpawnTimeout);
+            gameLoopInterval = setInterval(gameLoop, GAME_SPEED); schedulePrizeSpawn();
+        }
+        function gameLoop() {
+            if (isGameOver) {
+                clearInterval(gameLoopInterval); clearTimeout(prizeSpawnTimeout);
+                showGameMessage(`Game Over! Score: ${localPlayer.score}`, 'Play Again', () => { showScreen(startScreen); }); return;
+            }
+            changingDirection = false; clearCanvas(); drawFood(); handlePrize(); moveSnake(); drawSnake();
+        }
+        function clearCanvas() { ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); }
+
+        // --- Drawing Functions ---
+        function drawSnakePart(part, index) {
+            const isHead = index === 0; const partSize = isHead ? GRID_SIZE * HEAD_SIZE_MULTIPLIER : GRID_SIZE;
+            const offset = isHead ? (partSize - GRID_SIZE) / 2 : 0;
+            const drawX = part.x * GRID_SIZE - offset; const drawY = part.y * GRID_SIZE - offset;
+            ctx.fillStyle = isHead ? SNAKE_COLOR_HEAD : SNAKE_COLOR_BODY; ctx.strokeStyle = '#111827';
+            ctx.fillRect(drawX, drawY, partSize, partSize); ctx.strokeRect(drawX, drawY, partSize, partSize);
+            if (isHead) { drawAvatarOnHead(part, partSize, offset); drawNameTag(part, offset); }
+        }
+
+        function drawAvatarOnHead(head, headVisualSize, offset) {
+            const headCenterX = head.x * GRID_SIZE + GRID_SIZE / 2; const headCenterY = head.y * GRID_SIZE + GRID_SIZE / 2;
+            const avatarSize = headVisualSize * 0.8; const avatarDrawX = headCenterX - avatarSize / 2; const avatarDrawY = headCenterY - avatarSize / 2;
+            ctx.save(); ctx.beginPath(); ctx.arc(headCenterX, headCenterY, avatarSize / 2, 0, Math.PI * 2, true); ctx.closePath(); ctx.clip();
+
+            // Always draw image now
+             const avatarImg = preloadedAvatarImages.get(localPlayer.avatarValue); // Get preloaded image
+             if (avatarImg && avatarImg.complete && avatarImg.naturalWidth !== 0) {
+                 ctx.drawImage(avatarImg, avatarDrawX, avatarDrawY, avatarSize, avatarSize);
+             } else {
+                 // Fallback if specific image failed to load or isn't ready
+                 drawFallbackAvatar(headCenterX, headCenterY, avatarSize);
+             }
+            ctx.restore();
+        }
+
+        function drawFallbackAvatar(centerX, centerY, size) {
+             ctx.fillStyle = '#4a5568'; ctx.fillRect(centerX - size/2, centerY-size/2, size, size);
+             ctx.fillStyle = '#e2e8f0'; ctx.font = `bold ${size * 0.7}px sans-serif`;
+             ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', centerX, centerY);
+        }
+        // getIconUnicode no longer needed
+        // function getIconUnicode(className) { const icons = { ... }; return icons[className] || null; }
+        function drawNameTag(head, headOffset) {
+             const nameTagX = head.x * GRID_SIZE + GRID_SIZE / 2; const nameTagY = head.y * GRID_SIZE - headOffset - 5;
+             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+             ctx.fillText(localPlayer.name, nameTagX, nameTagY);
+        }
+        function drawSnake() { snake.forEach(drawSnakePart); }
+        function drawFood() {
+            ctx.fillStyle = FOOD_COLOR; ctx.strokeStyle = '#c53030';
+            ctx.fillRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            ctx.strokeRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+        }
+
+        function drawPrize() {
+             if (!prize.active) return;
+             const prizeDrawX = prize.x * GRID_SIZE; const prizeDrawY = prize.y * GRID_SIZE;
+             const label = prize.label || '2x';
+
+             // Always attempt to draw the hardcoded prize image
+             if (prize.imageUrl === HARDCODED_PRIZE_IMAGE_URL && hardcodedPrizeImageObject.complete && hardcodedPrizeImageObject.naturalWidth !== 0) {
+                 // Draw the hardcoded image
+                 const imgSize = GRID_SIZE * 4; // Size multiplier for prize image
+                 const imgDrawX = prizeDrawX + (GRID_SIZE - imgSize) / 2;
+                 const imgDrawY = prizeDrawY + (GRID_SIZE - imgSize) / 2;
+                 ctx.drawImage(hardcodedPrizeImageObject, imgDrawX, imgDrawY, imgSize, imgSize);
+
+                 // Draw label below the image
+                 ctx.fillStyle = 'white'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+                 ctx.fillText(label, prizeDrawX + GRID_SIZE / 2, prizeDrawY + imgSize + 2);
+
+             } else {
+                 // Fallback: Draw default colored square prize if image failed or isn't ready
+                 ctx.fillStyle = PRIZE_COLOR; ctx.strokeStyle = '#d69e2e';
+                 const pulseSize = GRID_SIZE * (1 + Math.sin(Date.now() / 150) * 0.1);
+                 const squareDrawX = prizeDrawX + (GRID_SIZE - pulseSize) / 2;
+                 const squareDrawY = prizeDrawY + (GRID_SIZE - pulseSize) / 2;
+                 ctx.fillRect(squareDrawX, squareDrawY, pulseSize, pulseSize);
+                 ctx.strokeRect(squareDrawX, squareDrawY, pulseSize, pulseSize);
+
+                 ctx.fillStyle = 'black'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+                 ctx.fillText(label, prizeDrawX + GRID_SIZE / 2, prizeDrawY + GRID_SIZE / 2 + 4);
+             }
+        }
+
+        // --- Movement & Collision ---
+        function moveSnake() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) { isGameOver = true; return; }
+            for (let i = 1; i < snake.length; i++) { if (head.x === snake[i].x && head.y === snake[i].y) { isGameOver = true; return; } }
+            snake.unshift(head);
+            let ateFood = false; let atePrize = false;
+
+            if (prize.active && head.x === prize.x && head.y === prize.y) {
+                localPlayer.score *= 2; prize.active = false; atePrize = true;
+                console.log("Prize Eaten! Score doubled."); updateScoreboard();
+                // Play prize sound
+                if (prizeSound.readyState >= 2 || prizeSound.HAVE_CURRENT_DATA) { // More robust check
+                     prizeSound.currentTime = 0;
+                     prizeSound.play().catch(e => console.error("Error playing prize sound:", e));
+                } else {
+                    console.warn("Prize sound not ready to play.");
+                    prizeSound.load(); // Try loading again
+                }
+            }
+
+            if (head.x === food.x && head.y === food.y) {
+                localPlayer.score += 10; ateFood = true; spawnFood(); updateScoreboard();
+                 // Play food sound
+                 if (foodSound.readyState >= 2 || foodSound.HAVE_CURRENT_DATA) { // More robust check
+                    foodSound.currentTime = 0;
+                    foodSound.play().catch(e => console.error("Error playing food sound:", e));
+                 } else {
+                    console.warn("Food sound not ready to play.");
+                    foodSound.load(); // Try loading again
+                 }
+            }
+
+            if (!ateFood && !atePrize) { snake.pop(); }
+            else if (!ateFood && atePrize) { snake.pop(); }
+        }
+        function changeDirection(event) {
+            if (changingDirection) return;
+            const LEFT_KEY = 37, RIGHT_KEY = 39, UP_KEY = 38, DOWN_KEY = 40; const keyPressed = event.keyCode;
+            const goingUp = dy === -1, goingDown = dy === 1, goingLeft = dx === -1, goingRight = dx === 1;
+            if (keyPressed === LEFT_KEY && !goingRight) { dx = -1; dy = 0; changingDirection = true; }
+            else if (keyPressed === UP_KEY && !goingDown) { dx = 0; dy = -1; changingDirection = true; }
+            else if (keyPressed === RIGHT_KEY && !goingLeft) { dx = 1; dy = 0; changingDirection = true; }
+            else if (keyPressed === DOWN_KEY && !goingUp) { dx = 0; dy = 1; changingDirection = true; }
+        }
+
+        // --- Food & Prize Spawning ---
+        function spawnFood() {
+            while (true) {
+                food.x = getRandomInt(0, TILE_COUNT_X - 1); food.y = getRandomInt(0, TILE_COUNT_Y - 1);
+                let collision = false;
+                for (let part of snake) if (part.x === food.x && part.y === food.y) { collision = true; break; }
+                if (prize.active && prize.x === food.x && prize.y === food.y) collision = true;
+                if (!collision) break;
+            }
+        }
+        function schedulePrizeSpawn() {
+            if (isGameOver) return; if (prizeSpawnTimeout) clearTimeout(prizeSpawnTimeout);
+            prizeSpawnTimeout = setTimeout(() => {
+                if (!prize.active && !isGameOver) { spawnPrize(); }
+                schedulePrizeSpawn();
+            }, PRIZE_SPAWN_INTERVAL + getRandomInt(-5000, 5000));
+        }
+        function spawnPrize() {
+            prize.active = true; prize.x = TILE_COUNT_X; prize.y = getRandomInt(0, TILE_COUNT_Y - 1);
+            prizeMoveCounter = 0;
+            // Set prize appearance based on selection (always image in this version)
+            prize.imageUrl = selectedPrizeValue; // Should be HARDCODED_PRIZE_IMAGE_URL
+            prize.label = '2x';
+            console.log("Prize spawned:", prize.imageUrl ? `Image (${prize.imageUrl})` : "Default", "Label:", prize.label);
+        }
+        function handlePrize() {
+            if (!prize.active) return;
+            prizeMoveCounter++;
+            if (prizeMoveCounter >= PRIZE_MOVE_INTERVAL) {
+                prize.x--; prizeMoveCounter = 0;
+                if (prize.x < 0) { prize.active = false; console.log("Prize missed."); }
+            }
+            drawPrize();
+        }
+
+        // --- Scoreboard ---
+        function updateScoreboard() {
+             scoreboardDiv.innerHTML = '';
+             const scoreElement = document.createElement('div'); scoreElement.classList.add('player-score');
+             let avatarHtml = '';
+             // Always image type now
+             const avatarImg = preloadedAvatarImages.get(localPlayer.avatarValue);
+             if (avatarImg) { // Check if image object exists for the URL
+                 avatarHtml = `<img src="${localPlayer.avatarValue}" alt="av" class="avatar-icon">`;
+             } else { // Fallback
+                  avatarHtml = `<div class="avatar-icon" style="background-color: #4a5568;">?</div>`;
+             }
+             scoreElement.innerHTML = `<span class="name">${avatarHtml}${localPlayer.name}</span> <span class="score">${localPlayer.score}</span>`;
+             scoreboardDiv.appendChild(scoreElement);
+             // Dummy players
+             const dummyPlayers = [ { name: "Bot 1", score: 0, avatar: 'fa-solid fa-robot' }, { name: "Bot 2", score: 0, avatar: 'fa-solid fa-ghost' }, { name: "Bot 3", score: 0, avatar: 'fa-solid fa-dragon' } ];
+             dummyPlayers.forEach(p => {
+                 const dummyElement = document.createElement('div'); dummyElement.classList.add('player-score', 'opacity-50');
+                 dummyElement.innerHTML = `<span class="name"><div class="avatar-icon" style="background-color: #4a5568;"><i class="${p.avatar}"></i></div>${p.name}</span><span class="score">${p.score}</span>`;
+                 scoreboardDiv.appendChild(dummyElement);
+             });
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('keydown', changeDirection);
+        window.addEventListener('resize', handleResize);
+        joinGameButton.addEventListener('click', () => {
+            const name = playerNameInput.value.trim(); localPlayer.name = name || "Player";
+            // Ensure the selected avatar and prize states are correctly set before starting
+            const selectedAvatarElement = avatarOptionsContainer.querySelector('.selection-option.selected');
+            if (selectedAvatarElement) selectAvatar(selectedAvatarElement);
+            const selectedPrizeElement = prizeOptionsContainer.querySelector('.selection-option.selected');
+            if (selectedPrizeElement) selectPrize(selectedPrizeElement);
+
+            console.log("Starting game for:", localPlayer);
+            console.log("Using Prize Image:", selectedPrizeValue);
+            foodSound.load(); prizeSound.load();
+            initializeGame();
+        });
+
+        // --- Initial Setup ---
+        updateCanvasSize(); showScreen(startScreen);
+        // Ensure default selections are visually correct
+        selectAvatar(avatarOptionsContainer.querySelector('.selection-option.selected'));
+        selectPrize(prizeOptionsContainer.querySelector('.selection-option.selected'));
+
+    </script>
+</body>
+</html>
